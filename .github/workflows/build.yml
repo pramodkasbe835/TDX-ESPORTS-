@@ -32,6 +32,7 @@ jobs:
 
       - name: Install Android 36
         run: |
+          yes | sdkmanager --licenses || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Find Node project
@@ -43,9 +44,9 @@ jobs:
             exit 1
           fi
 
-          echo "Found package.json: $PACKAGE"
           NODE_DIR=$(dirname "$PACKAGE")
           echo "NODE_DIR=$NODE_DIR" >> "$GITHUB_ENV"
+          echo "Found Node project: $NODE_DIR"
 
       - name: Install dependencies
         run: |
@@ -57,35 +58,64 @@ jobs:
           cd "$NODE_DIR"
           npx cap sync android
 
-      - name: Update compileSdk
+      - name: Force Android compileSdk 36
         run: |
-          find "$NODE_DIR/android" -type f \( -name "build.gradle" -o -name "build.gradle.kts" \) -print0 |
-          xargs -0 sed -i -E 's/compileSdk(Version)?[[:space:]]*[=:]?[[:space:]]*35/compileSdk\1 36/g'
+          cat > "$GITHUB_WORKSPACE/force-sdk.gradle" <<'EOF'
+          allprojects {
+              afterEvaluate { project ->
+                  def androidExtension = project.extensions.findByName("android")
+
+                  if (androidExtension != null) {
+                      try {
+                          androidExtension.compileSdkVersion(36)
+                          println("FORCED compileSdk = 36 for " + project.path)
+                      } catch (Exception e) {
+                          println("Could not set compileSdk for " + project.path + ": " + e.message)
+                      }
+                  }
+              }
+          }
+          EOF
+
+          echo "Created Gradle override:"
+          cat "$GITHUB_WORKSPACE/force-sdk.gradle"
+
+      - name: Remove local SDK settings
+        run: |
+          find "$NODE_DIR/android" -name local.properties -delete || true
 
       - name: Find Gradle project
         run: |
-          find project -name local.properties -delete
-
-          GRADLEW=$(find project -type f -name gradlew | head -n 1)
+          GRADLEW=$(find "$NODE_DIR/android" -type f -name gradlew | head -n 1)
 
           if [ -z "$GRADLEW" ]; then
             echo "gradlew not found"
+            find "$NODE_DIR/android" -maxdepth 3 -type f | head -100
             exit 1
           fi
 
-          echo "Found Gradle: $GRADLEW"
-          chmod +x "$GRADLEW"
-
           echo "GRADLEW=$GRADLEW" >> "$GITHUB_ENV"
-          echo "PROJECT_DIR=$(dirname "$GRADLEW")" >> "$GITHUB_ENV"
+          echo "ANDROID_DIR=$(dirname "$GRADLEW")" >> "$GITHUB_ENV"
+
+          chmod +x "$GRADLEW"
 
       - name: Build APK
         run: |
-          cd "$PROJECT_DIR"
-          "$GITHUB_WORKSPACE/$GRADLEW" assembleDebug
+          cd "$ANDROID_DIR"
+
+          ./gradlew \
+            --init-script "$GITHUB_WORKSPACE/force-sdk.gradle" \
+            assembleDebug \
+            --stacktrace
+
+      - name: Find APK
+        run: |
+          echo "Searching for APK..."
+          find "$NODE_DIR/android" -type f -name "*.apk" -print
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: TDX-ESPORTS-APK
-          path: project/**/build/outputs/apk/**/*.apk
+          path: "**/build/outputs/apk/**/*.apk"
+          if-no-files-found: error
