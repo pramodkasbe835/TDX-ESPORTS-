@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TDX ESPORTS - Profile</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b0b12;
+      color: white;
+    }
+
+    .header {
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .profile {
+      max-width: 420px;
+      margin: 20px auto;
+      padding: 25px;
+      text-align: center;
+    }
+
+    .dp {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #ffffff;
+      background: #222;
+    }
+
+    .name {
+      margin: 18px 0;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      margin: 15px 0;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #ffffff;
+      color: #000000;
+    }
+
+    .back {
+      margin-top: 15px;
+      background: #222;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    TDX ESPORTS
+  </div>
+
+  <div class="profile">
+
+    <img id="profileDP" class="dp" src="" alt="Profile">
+
+    <div id="displayName" class="name">
+      Player
+    </div>
+
+    <input
+      type="text"
+      id="playerName"
+      placeholder="Enter your player name"
+      maxlength="30"
+    >
+
+    <input
+      type="file"
+      id="dpInput"
+      accept="image/*"
+    >
+
+    <button onclick="saveProfile()">
+      SAVE PROFILE
+    </button>
+
+    <button class="back" onclick="history.back()">
+      BACK
+    </button>
+
+  </div>
+
+  <script>
+    const defaultDP =
+      "data:image/svg+xml;charset=UTF-8," +
+      encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg"
+             width="300" height="300">
+          <rect width="100%" height="100%" fill="#222"/>
+          <text x="50%" y="55%"
+                dominant-baseline="middle"
+                text-anchor="middle"
+                fill="white"
+                font-size="90">P</text>
+        </svg>
+      `);
+
+    function loadProfile() {
+      const savedName =
+        localStorage.getItem("tdx_player_name");
+
+      const savedDP =
+        localStorage.getItem("tdx_player_dp");
+
+      document.getElementById("displayName").textContent =
+        savedName || "Player";
+
+      document.getElementById("playerName").value =
+        savedName || "";
+
+      document.getElementById("profileDP").src =
+        savedDP || defaultDP;
+    }
+
+    function saveProfile() {
+      const name =
+        document.getElementById("playerName").value.trim();
+
+      if (name === "") {
+        alert("Please enter player name");
+        return;
+      }
+
+      localStorage.setItem(
+        "tdx_player_name",
+        name
+      );
+
+      const file =
+        document.getElementById("dpInput").files[0];
+
+      if (file) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          localStorage.setItem(
+            "tdx_player_dp",
+            e.target.result
+          );
+
+          loadProfile();
+          alert("Profile saved!");
+        };
+
+        reader.readAsDataURL(file);
+      } else {
+        loadProfile();
+        alert("Profile saved!");
+      }
+    }
+
+    loadProfile();
+  </script>
+
+</body>
+</html>
