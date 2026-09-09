@@ -33,7 +33,7 @@ jobs:
       - name: Extract project
         run: |
           mkdir project
-          unzip tdx-esports.zip -d project
+          unzip tdx-esports-profile-dp.zip -d project
 
       - name: Prepare web files
         run: |
