@@ -27,6 +27,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 36
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - name: Find Node project
         run: |
           PACKAGE=$(find project -type f -name package.json -not -path '*/node_modules/*' | head -n 1)
@@ -50,6 +57,11 @@ jobs:
           cd "$NODE_DIR"
           npx cap sync android
 
+      - name: Update compileSdk
+        run: |
+          find "$NODE_DIR/android" -type f \( -name "build.gradle" -o -name "build.gradle.kts" \) -print0 |
+          xargs -0 sed -i -E 's/compileSdk(Version)?[[:space:]]*[=:]?[[:space:]]*35/compileSdk\1 36/g'
+
       - name: Find Gradle project
         run: |
           find project -name local.properties -delete
@@ -63,6 +75,7 @@ jobs:
 
           echo "Found Gradle: $GRADLEW"
           chmod +x "$GRADLEW"
+
           echo "GRADLEW=$GRADLEW" >> "$GITHUB_ENV"
           echo "PROJECT_DIR=$(dirname "$GRADLEW")" >> "$GITHUB_ENV"
 
